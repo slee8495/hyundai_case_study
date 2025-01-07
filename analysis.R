@@ -1,0 +1,338 @@
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+library(fmsb)
+library(nloptr)
+
+# consolidated data
+consolidated_data <- data.frame(
+  Month = c("2020-12", "2021-01"),
+  Retail_Share = c(7.5, 6.9),  
+  Incentive_Spend = c(3386, 3443),  
+  CFTP = c(22111, 22338),  
+  Lease_Penetration = c(25.5, 25),  
+  Dealer_Profitability = c(3, 144), 
+  Entry_CUV_Share = c(5.5, 6.3), 
+  Kona_Sales = c(5817, 4094)  
+)
+
+
+consolidated_data %>%
+  kbl(
+    caption = "Corrected Key Metrics for Kona (Dec 2020 - Jan 2021)",
+    col.names = c(
+      "Month", "Retail Share (%)", "Incentive Spend ($)", "CFTP ($)",
+      "Lease Penetration (%)", "Dealer Profitability ($)", 
+      "Entry CUV Share (%)", "Kona Sales (Units)"
+    ),
+    align = "c"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#2c3e50") %>%
+  column_spec(2:8, width = "3cm") %>%  
+  add_header_above(c(" " = 1, "Kona Metrics" = 7)) 
+
+
+
+
+
+####################
+
+
+# Bar chart for MOS by region
+regional_data <- data.frame(
+  Region = c("Southern", "Eastern", "Western", "Central", "Mid-Atlantic", "Mountain States", "South Central"),
+  MOS = c(3.1, 3.4, 4.3, 4.6, 4.9, 5.0, 5.5)
+)
+
+ggplot(regional_data, aes(x = reorder(Region, MOS), y = MOS, fill = MOS)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(MOS, 1)), vjust = -0.5, size = 8) + 
+  scale_fill_gradient(low = "lightgreen", high = "red") +
+  labs(
+    title = "Months of Stock (MOS) by Region",
+    y = "Months of Stock"
+  ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    axis.title.y = element_text(size = 20, face = "bold"),           
+    axis.text.x = element_text(size = 18, face = "bold"),            
+    axis.text.y = element_text(size = 18),                         
+    axis.title.x = element_blank(),                                 
+    legend.position = "none"                                       
+  )
+
+
+########################
+
+
+# Heatmap for MOS by trim and region
+heatmap_data <- data.frame(
+  Trim = rep(c("SE", "SEL", "SEL Plus", "Limited + Night", "Ultimate"), each = 7),
+  Region = rep(c("Southern", "Eastern", "Western", "Central", "Mid-Atlantic", "Mountain States", "South Central"), 5),
+  MOS = c(2.2, 2.5, 4.3, 2.2, 2.7, 2.2, 1.5,  # SE
+          2.6, 2.2, 3.9, 3.5, 2.9, 4.4, 5.2,  # SEL
+          2.3, 3.5, 4.0, 4.0, 4.9, 5.5, 5.0,  # SEL Plus
+          5.6, 5.4, 5.0, 8.9, 10.0, 8.6, 11.0, # Limited + Night
+          5.1, 5.4, 4.8, 7.8, 7.3, 6.3, 8.8)  # Ultimate
+)
+
+ggplot(heatmap_data, aes(x = Region, y = Trim, fill = MOS)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightgreen", high = "red", name = "MOS") +
+  labs(
+    title = "Months of Stock (MOS) by Trim and Region"
+  ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    axis.title = element_blank(),                                     
+    axis.text = element_text(size = 18, face = "bold"),               
+    legend.position = "none"                                          
+  )
+
+
+###################
+stacked_data <- data.frame(
+  Month = as.Date(c("2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01")),
+  MY_2020 = c(69, 38, 24, 15, 10, 6, 4),
+  MY_2021 = c(31, 62, 76, 85, 90, 94, 96)
+) %>%
+  tidyr::pivot_longer(cols = -Month, names_to = "Model_Year", values_to = "Percentage")
+
+ggplot2::ggplot(stacked_data, ggplot2::aes(x = Month, y = Percentage, fill = Model_Year)) +
+  ggplot2::geom_bar(stat = "identity") +
+  ggplot2::geom_text(ggplot2::aes(label = Percentage), position = ggplot2::position_stack(vjust = 0.5), 
+                     size = 4, fontface = "bold", color = "black") +
+  ggplot2::scale_fill_manual(values = c("MY_2020" = "pink", "MY_2021" = "lightblue")) +
+  ggplot2::labs(
+    title = "Dealer Stock Mix Transition: MY 2020 vs. MY 2021",
+    y = "Percentage of Dealer Stock",
+    fill = "Model Year",
+    x = " "
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title.y = ggplot2::element_text(size = 18),
+    axis.text = ggplot2::element_text(size = 16),
+    legend.position = c(0.8, 0.8),
+    legend.background = ggplot2::element_rect(fill = "white", color = "black"),
+    legend.key.size = ggplot2::unit(0.8, "cm")
+  )
+
+
+##############
+
+# Data for radar chart
+radar_data <- data.frame(
+  Retail_Share = c(7.5, 6.9),       
+  Incentive_Spend = c(3386, 3443),   
+  CFTP = c(22111, 22338),            
+  Lease_Penetration = c(25.5, 25.0), 
+  Kona_Sales = c(5817, 4094)   
+)
+row.names(radar_data) <- c("Dec_2020", "Jan_2021")
+
+# Add max and min values for scaling
+max_min <- data.frame(
+  Retail_Share = c(9.2, 5.2),        # Max and Min for Retail Share
+  Incentive_Spend = c(3900, 2800),# Max and Min for Incentive Spend
+  CFTP = c(23000, 22000),         # Max and Min for CFTP
+  Lease_Penetration = c(28, 22),  # Max and Min for Lease Penetration
+  Kona_Sales = c(6300, 3500) # Max and Min for Dealer Profitability
+)
+row.names(max_min) <- c("Max", "Min")
+
+# Combine data for radar chart
+radar_data_scaled <- rbind(max_min, radar_data)
+
+# Create radar chart without percentage labels
+radarchart(
+  radar_data_scaled,
+  axistype = 0,                   
+  pcol = c("blue", "red"),        
+  pfcol = c(rgb(0.1, 0.2, 0.5, 0.3), rgb(0.8, 0.2, 0.2, 0.3)),
+  plwd = 2,                      
+  title = "Kona ICE Performance Overview (Dec 2020 vs. Jan 2021)",
+  vlcex = 1.1                     
+)
+
+legend(
+  "topright", legend = c("Dec 2020", "Jan 2021"),
+  col = c("blue", "red"), lty = 1, lwd = 2, bty = "n"
+)
+
+
+
+############################
+# Create the data frame with percentage decrease calculated
+competitor_data <- data.frame(
+  Month = c("Dec 2020", "Jan 2021", "Change (%)"),
+  Seltos = c(6107, 4992, round(((4992 - 6107) / 6107) * 100, 1)),
+  Crosstrek = c(14957, 10431, round(((10431 - 14957) / 14957) * 100, 1)),
+  HR_V = c(8428, 6369, round(((6369 - 8428) / 8428) * 100, 1))
+)
+
+# Format the table with source and change percentage
+competitor_data %>%
+  kbl(
+    caption = "Competitor Sales: Dec 2020 vs. Jan 2021",
+    col.names = c("Month", "Seltos (Units)", "Crosstrek (Units)", "HR-V (Units)"),
+    align = "c"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#2c3e50") %>%
+  column_spec(2:4, width = "4cm") %>%
+  footnote(
+    general = "Source: https://www.conceptcarz.com/monthly-sales",
+    general_title = " ",
+    footnote_as_chunk = TRUE
+  )
+
+
+
+############################
+# Create the pipeline data frame
+pipeline_data <- data.frame(
+  Category = c("Dealer Stock", "In-Transit Vehicles", "Port Inventory", "Unbuilt Units"),
+  Units = c(19893, 1326, 1157, 8989)
+)
+
+# Generate the table using kableExtra
+pipeline_data %>%
+  kbl(
+    caption = "Pipeline Overview",
+    col.names = c("Category", "Units"),
+    align = "c"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE
+  ) %>%
+  column_spec(1, bold = TRUE, width = "5cm") %>%
+  column_spec(2, width = "3cm") %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#2c3e50")
+
+
+
+
+############################
+
+# Baseline KPIs
+kpi_data <- data.frame(
+  Region = c("Southern", "Eastern", "Western", "Central", "Mid-Atlantic", "Mountain States", "South Central"),
+  Dealer_Stock = c(19893, 1157, 5000, 3000, 4000, 2500, 2000),
+  MOS = c(3.1, 3.4, 4.3, 4.6, 4.9, 5.0, 5.5),
+  Port_Inventory = c(1157, 0, 0, 0, 0, 0, 0),  # Placeholder
+  Unbuilt_Units = c(8989, 0, 0, 0, 0, 0, 0)   # Placeholder
+)
+
+# Reallocation scenarios
+scenario_1 <- kpi_data %>%
+  mutate(
+    Port_Inventory = ifelse(Region %in% c("Southern", "Eastern"), Port_Inventory + 300, Port_Inventory - 300),
+    Unbuilt_Units = ifelse(Region %in% c("Southern", "Eastern"), Unbuilt_Units + 500, Unbuilt_Units - 500)
+  )
+
+# Predicting impact (example calculation: MOS adjustment)
+scenario_1 <- scenario_1 %>%
+  mutate(
+    New_MOS = MOS + (Port_Inventory + Unbuilt_Units) / Dealer_Stock
+  )
+
+# Create a comparison table
+comparison <- scenario_1 %>%
+  select(Region, Dealer_Stock, MOS, New_MOS, Port_Inventory, Unbuilt_Units) %>%
+  kbl(
+    caption = "What-If Analysis: Reallocation of Inventory and Impact on MOS",
+    col.names = c("Region", "Dealer Stock", "Current MOS", "New MOS", "Port Inventory", "Unbuilt Units"),
+    align = "c"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+
+# View table
+comparison
+
+
+############################
+
+
+# Baseline KPIs
+kpi_data <- data.frame(
+  Region = c("Southern", "Eastern", "Western", "Central", "Mid-Atlantic", "Mountain States", "South Central"),
+  Dealer_Stock = c(19893, 1157, 5000, 3000, 4000, 2500, 2000),
+  MOS = c(3.1, 3.4, 4.3, 4.6, 4.9, 5.0, 5.5),
+  Port_Inventory = c(1157, 0, 0, 0, 0, 0, 0),  # Placeholder
+  Unbuilt_Units = c(8989, 0, 0, 0, 0, 0, 0)   # Placeholder
+)
+
+# Objective Function: Maximize average New_MOS
+objective_function <- function(x, kpi_data) {
+  # x[1:7] are Port_Inventory adjustments
+  # x[8:14] are Unbuilt_Units adjustments
+  kpi_data <- kpi_data %>%
+    mutate(
+      Port_Inventory = Port_Inventory + x[1:7],
+      Unbuilt_Units = Unbuilt_Units + x[8:14],
+      New_MOS = MOS + (Port_Inventory + Unbuilt_Units) / Dealer_Stock
+    )
+  
+  # Return negative average New_MOS (since nloptr minimizes by default)
+  return(-mean(kpi_data$New_MOS))
+}
+
+# Constraints
+constraint_function <- function(x, kpi_data) {
+  # Ensure the sum of adjustments for Port_Inventory and Unbuilt_Units is zero (redistribution)
+  port_adjustment <- sum(x[1:7])
+  unbuilt_adjustment <- sum(x[8:14])
+  
+  # Ensure no negative values for Port_Inventory and Unbuilt_Units
+  kpi_data <- kpi_data %>%
+    mutate(
+      Port_Inventory = Port_Inventory + x[1:7],
+      Unbuilt_Units = Unbuilt_Units + x[8:14]
+    )
+  
+  # Constraints to be >= 0
+  constraints <- c(
+    port_adjustment, 
+    unbuilt_adjustment, 
+    kpi_data$Port_Inventory, 
+    kpi_data$Unbuilt_Units
+  )
+  return(constraints)
+}
+
+# Initial guesses for adjustments (all zeros)
+init_guess <- rep(0, 14)
+
+# Optimization using NLOPT_LN_COBYLA
+result <- nloptr::nloptr(
+  x0 = init_guess,
+  eval_f = function(x) objective_function(x, kpi_data),  # Pass kpi_data explicitly
+  eval_g_ineq = function(x) constraint_function(x, kpi_data),  # Pass kpi_data explicitly
+  lb = rep(-300, 14),  # Lower bound for adjustments
+  ub = rep(300, 14),   # Upper bound for adjustments
+  opts = list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-6)
+)
+
+# Updated KPI data with optimized adjustments
+optimized_kpi <- kpi_data %>%
+  mutate(
+    Port_Inventory = Port_Inventory + result$solution[1:7],
+    Unbuilt_Units = Unbuilt_Units + result$solution[8:14],
+    New_MOS = MOS + (Port_Inventory + Unbuilt_Units) / Dealer_Stock
+  )
+
+# Display optimized results
+optimized_kpi %>%
+  select(Region, Dealer_Stock, MOS, New_MOS, Port_Inventory, Unbuilt_Units) %>%
+  kbl(
+    caption = "Optimized What-If Analysis: Reallocation of Inventory and Impact on MOS",
+    col.names = c("Region", "Dealer Stock", "Current MOS", "Optimized New MOS", "Port Inventory", "Unbuilt Units"),
+    align = "c"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
