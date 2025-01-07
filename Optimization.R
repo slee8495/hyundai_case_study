@@ -129,3 +129,28 @@ optimized_allocation %>%
 
 total_allocated <- sum(result$solution)
 print(paste("Total Allocated Units:", round(total_allocated, 0)))
+
+
+
+
+
+
+############################################
+library(gridExtra)
+
+# Arrange all tables in a compact grid layout
+grid_layout <- grid.arrange(
+  grobs = tables,
+  ncol = 3,  # Adjust columns for better fit
+  top = textGrob("Optimized Allocation by Region", gp = gpar(fontsize = 14)),
+  layout_matrix = rbind(
+    c(1, 2, 3),
+    c(4, 5, 6),
+    c(7, NA, NA)  # Handles uneven rows gracefully
+  )
+)
+
+# Save the grid layout as a PNG with adjusted dimensions
+png("optimized_allocation_compact.png", width = 200, height = 800, res = 150)
+grid.draw(grid_layout)
+dev.off()
