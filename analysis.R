@@ -354,3 +354,25 @@ optimized_kpi %>%
     align = "c"
   ) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+
+
+
+##############################
+
+
+region_data <- data.frame(
+  Region = c("Central", "Eastern", "Mid-Atlantic", "Mountain States", "South Central", "Southern", "Western"),
+  Unbuilt_Units_Planned = c(1743, 2707, 676, 599, 616, 1538, 1110)
+)
+
+region_data %>%
+  kbl(
+    caption = "Planned Unbuilt Units by Region",
+    col.names = c("Region", "Unbuilt Units Planned"),
+    align = "c"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = FALSE, 
+                position = "center") %>%
+  row_spec(0, bold = TRUE, background = "#f7f7f7") %>%
+  column_spec(2, width = "10em")
