@@ -259,16 +259,20 @@ comparison
 ############################
 
 
+library(nloptr)
+library(dplyr)
+library(kableExtra)
+
 # Baseline KPIs
 kpi_data <- data.frame(
   Region = c("Southern", "Eastern", "Western", "Central", "Mid-Atlantic", "Mountain States", "South Central"),
-  Dealer_Stock = c(19893, 1157, 5000, 3000, 4000, 2500, 2000),
+  Dealer_Stock = c(3321, 3892, 2757, 3861, 1726, 1666, 2670),
   MOS = c(3.1, 3.4, 4.3, 4.6, 4.9, 5.0, 5.5),
-  Port_Inventory = c(1157, 0, 0, 0, 0, 0, 0),  # Placeholder
-  Unbuilt_Units = c(8989, 0, 0, 0, 0, 0, 0)   # Placeholder
+  Port_Inventory = 1157 * c(3321, 3892, 2757, 3861, 1726, 1666, 2670) / sum(c(3321, 3892, 2757, 3861, 1726, 1666, 2670)),
+  Unbuilt_Units = 8989 * c(3321, 3892, 2757, 3861, 1726, 1666, 2670) / sum(c(3321, 3892, 2757, 3861, 1726, 1666, 2670))
 )
 
-# Objective Function: Maximize average New_MOS
+# Objective Function: Minimize average New_MOS
 objective_function <- function(x, kpi_data) {
   # x[1:7] are Port_Inventory adjustments
   # x[8:14] are Unbuilt_Units adjustments
@@ -279,43 +283,42 @@ objective_function <- function(x, kpi_data) {
       New_MOS = MOS + (Port_Inventory + Unbuilt_Units) / Dealer_Stock
     )
   
-  # Return negative average New_MOS (since nloptr minimizes by default)
-  return(-mean(kpi_data$New_MOS))
+  # Return average New_MOS (lower is better)
+  return(mean(kpi_data$New_MOS))
 }
 
-# Constraints
+# Constraints Function
 constraint_function <- function(x, kpi_data) {
-  # Ensure the sum of adjustments for Port_Inventory and Unbuilt_Units is zero (redistribution)
-  port_adjustment <- sum(x[1:7])
-  unbuilt_adjustment <- sum(x[8:14])
+  # Total allocation must match the initial totals
+  total_port_inventory <- sum(x[1:7]) - 1157
+  total_unbuilt_units <- sum(x[8:14]) - 8989
   
-  # Ensure no negative values for Port_Inventory and Unbuilt_Units
+  # Ensure no negative allocations
   kpi_data <- kpi_data %>%
     mutate(
       Port_Inventory = Port_Inventory + x[1:7],
       Unbuilt_Units = Unbuilt_Units + x[8:14]
     )
   
-  # Constraints to be >= 0
   constraints <- c(
-    port_adjustment, 
-    unbuilt_adjustment, 
-    kpi_data$Port_Inventory, 
-    kpi_data$Unbuilt_Units
+    total_port_inventory,   # Total Port Inventory constraint
+    total_unbuilt_units,    # Total Unbuilt Units constraint
+    kpi_data$Port_Inventory, # No negative Port Inventory
+    kpi_data$Unbuilt_Units  # No negative Unbuilt Units
   )
   return(constraints)
 }
 
-# Initial guesses for adjustments (all zeros)
-init_guess <- rep(0, 14)
+# Initial Guesses
+init_guess <- rep(0, 14)  # Start with no adjustments
 
 # Optimization using NLOPT_LN_COBYLA
 result <- nloptr::nloptr(
   x0 = init_guess,
-  eval_f = function(x) objective_function(x, kpi_data),  # Pass kpi_data explicitly
-  eval_g_ineq = function(x) constraint_function(x, kpi_data),  # Pass kpi_data explicitly
-  lb = rep(-300, 14),  # Lower bound for adjustments
-  ub = rep(300, 14),   # Upper bound for adjustments
+  eval_f = function(x) objective_function(x, kpi_data),
+  eval_g_ineq = function(x) constraint_function(x, kpi_data),
+  lb = rep(0, 14),  # Lower bound: No negative allocation
+  ub = rep(Inf, 14), # Upper bound: No restriction
   opts = list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-6)
 )
 
@@ -327,12 +330,27 @@ optimized_kpi <- kpi_data %>%
     New_MOS = MOS + (Port_Inventory + Unbuilt_Units) / Dealer_Stock
   )
 
-# Display optimized results
+# Adjustment Function to Match Totals
+adjust_to_match_total <- function(values, desired_total) {
+  adjustment_factor <- desired_total / sum(values)
+  adjusted_values <- values * adjustment_factor
+  return(adjusted_values)
+}
+
+# Adjust Port_Inventory and Unbuilt_Units to Match Totals
+optimized_kpi <- optimized_kpi %>%
+  mutate(
+    Port_Inventory = adjust_to_match_total(Port_Inventory, 1157),  # Match original total Port Inventory
+    Unbuilt_Units = adjust_to_match_total(Unbuilt_Units, 8989),   # Match original total Unbuilt Units
+    New_MOS = MOS + (Port_Inventory + Unbuilt_Units) / Dealer_Stock
+  )
+
+# Display Final Adjusted Results
 optimized_kpi %>%
   select(Region, Dealer_Stock, MOS, New_MOS, Port_Inventory, Unbuilt_Units) %>%
   kbl(
     caption = "Optimized What-If Analysis: Reallocation of Inventory and Impact on MOS",
-    col.names = c("Region", "Dealer Stock", "Current MOS", "Optimized New MOS", "Port Inventory", "Unbuilt Units"),
+    col.names = c("Region", "Dealer Stock", "Current MOS", "Adjusted New MOS", "Adjusted Port Inventory", "Adjusted Unbuilt Units"),
     align = "c"
   ) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
