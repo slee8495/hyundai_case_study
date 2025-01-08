@@ -141,7 +141,6 @@ library(dplyr)
 # Split the data by region
 split_tables <- optimized_allocation %>%
   select(Region, Trim, Allocated, Planned_MOS) %>%
-  rename(MOS = Planned_MOS) %>% 
   group_split(Region)
 
 # Create polished tables for each region
@@ -150,8 +149,8 @@ polished_tables <- lapply(split_tables, function(region_table) {
   region_table %>%
     kbl(
       caption = paste("Optimized Allocation for Region:", region_name),
-      col.names = c("Region", "Trim", "Allocated Units", "Planned MOS", "New MOS"),
-      align = c("l", "l", "c", "c", "c")
+      col.names = c("Region", "Trim", "Allocated Units", "MOS"),
+      align = c("l", "l", "c")
     ) %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) %>%
     row_spec(0, bold = TRUE, font_size = 12) %>%
