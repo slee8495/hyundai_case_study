@@ -376,3 +376,58 @@ region_data %>%
                 position = "center") %>%
   row_spec(0, bold = TRUE, background = "#f7f7f7") %>%
   column_spec(2, width = "10em")
+
+
+
+
+##############################
+
+
+
+# First Table Data
+region_data <- data.frame(
+  Region = c("Central (4.6)", "Eastern (3.4)", "Mid-Atlantic (4.9)", 
+             "Mountain States (5.0)", "South Central (5.5)", 
+             "Southern (3.1)", "Western (4.3)"),
+  Original = c(1743, 2707, 676, 599, 616, 1538, 1110),
+  Suggested = c(1890, 2930, 583, 330, 609, 1702, 830),
+  Variance = c(147, 223, -93, -269, -7, 164, -280)
+)
+
+# Polishing First Table
+region_table <- region_data %>%
+  kbl(caption = "Optimized Allocation by Region",
+      col.names = c("Region (MOS)", "Original Plan", "Optimized Suggestion", "Variance"),
+      align = c("l", "c", "c", "c")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  row_spec(0, bold = T, font_size = 12) %>%
+  column_spec(4, bold = T, background = ifelse(region_data$Variance < 0, "#FFCCCB", "#DFFFD6")) %>%
+  column_spec(2:3, width = "3cm") %>%
+  column_spec(1, bold = T, width = "5cm") %>%
+  add_header_above(c(" " = 1, "Unbuilt Units" = 2, " " = 1))
+
+# Second Table Data
+trim_data <- data.frame(
+  Trim = c("Limited + Night", "SE", "SEL", "SEL Plus", "Ultimate"),
+  Original = c(1273, 2183, 2865, 1581, 1087),
+  Suggested = c(447, 3525, 3319, 1133, 450),
+  Variance = c(-826, 1342, 454, -448, -637)
+)
+
+# Polishing Second Table
+trim_table <- trim_data %>%
+  kbl(caption = "Optimized Allocation by Trim",
+      col.names = c("Trim", "Original Plan", "Optimized Suggestion", "Variance"),
+      align = c("l", "c", "c", "c")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  row_spec(0, bold = T, font_size = 12) %>%
+  column_spec(4, bold = T, background = ifelse(trim_data$Variance < 0, "#FFCCCB", "#DFFFD6")) %>%
+  column_spec(2:3, width = "3cm") %>%
+  column_spec(1, bold = T, width = "5cm") %>%
+  add_header_above(c(" " = 1, "Unbuilt Units" = 2, " " = 1))
+
+
+
+# Display tables
+region_table
+trim_table
