@@ -438,8 +438,4 @@ region_table
 trim_table
 
 
-ß
-
-
-
 
